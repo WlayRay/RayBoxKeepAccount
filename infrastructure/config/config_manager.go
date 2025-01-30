@@ -123,10 +123,8 @@ func RedisConfig(name string) *redis.UniversalOptions {
 		addrs := strings.Split(val.(string), ",")
 		option = redis.UniversalOptions{
 			Addrs:         addrs,
-			Password:      defaultManager.Get(fmt.Sprintf("REDIS_%s_PASSWORD", name)),
-			PoolSize:      100,
-			ReadOnly:      true,
-			RouteRandomly: true,
+			// Password:      defaultManager.Get(fmt.Sprintf("REDIS_%s_PASSWORD", name)),
+			PoolSize:      60,
 			MinIdleConns:  30,
 		}
 	} else {
