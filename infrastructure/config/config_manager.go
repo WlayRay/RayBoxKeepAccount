@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"ray_box/infrastructure/zlog"
+	"runtime"
 	"strings"
 	"sync"
 
+	"github.com/redis/go-redis/v9"
 	"gopkg.in/yaml.v3"
 )
 
@@ -14,13 +17,19 @@ type Manager struct {
 	configs sync.Map
 }
 
-var defaultManager = &Manager{}
-
-const configDir = "config"
+var (
+	defaultManager = &Manager{}
+	rootPath       string
+	configDir      string
+)
 
 func init() {
+	_, filename, _, _ := runtime.Caller(0)
+	rootPath = filepath.Join(filepath.Dir(filename), "../..")
+	configDir = filepath.Join(rootPath, "config")
+
 	if err := defaultManager.Load(); err != nil {
-		panic(fmt.Sprintf("加载配置文件失败: %v", err))
+		panic(fmt.Sprintf("加载配置文件失败 -> %v", err))
 	}
 }
 
@@ -103,4 +112,36 @@ func GetWithDefault(key, defaultValue string) string {
 		return defaultValue
 	}
 	return value
+}
+
+// RedisConfig 获取redis配置
+func RedisConfig(name string) *redis.UniversalOptions {
+	name = strings.ToUpper(name)
+	var option redis.UniversalOptions
+	// 当UniversalOptions Address > 1时为集群
+	if val, ok := defaultManager.configs.Load(fmt.Sprintf("REDIS_%s_NODES", name)); ok && val != "" {
+		addrs := strings.Split(val.(string), ",")
+		option = redis.UniversalOptions{
+			Addrs:         addrs,
+			Password:      defaultManager.Get(fmt.Sprintf("REDIS_%s_PASSWORD", name)),
+			PoolSize:      100,
+			ReadOnly:      true,
+			RouteRandomly: true,
+			MinIdleConns:  30,
+		}
+	} else {
+		zlog.Warn(fmt.Sprintf("REDIS_%s_NODES", name) + "不存在")
+		_, ok = defaultManager.configs.Load(fmt.Sprintf("REDIS_%s_HOST", name))
+		if !ok {
+			zlog.Warn(fmt.Sprintf("REDIS_%s_HOST", name) + "不存在")
+		}
+		option = redis.UniversalOptions{
+			Addrs:    []string{defaultManager.Get(fmt.Sprintf("REDIS_%s_HOST", name)) + ":" + defaultManager.Get(fmt.Sprintf("REDIS_%s_PORT", name))},
+			Password: defaultManager.Get(fmt.Sprintf("REDIS_%s_PASSWORD", name)),
+			DB:       0,
+			PoolSize: 100,
+		}
+	}
+
+	return &option
 }

@@ -1,10 +1,14 @@
 package controller
 
 import (
+	"crypto/rand"
+	"io"
+	"ray_box/infrastructure/config"
 	"ray_box/infrastructure/httputil"
 	"ray_box/infrastructure/xerror"
 	"ray_box/infrastructure/zlog"
 	"ray_box/internal/service"
+	"time"
 
 	"github.com/kataras/iris/v12"
 	"go.uber.org/zap"
@@ -43,5 +47,36 @@ func (*accountController) Login(ctx iris.Context) {
 		return
 	}
 
-	httputil.JSONSuccess().WithMsg("登录成功！").Response(ctx)
+	header := httputil.DefaultHeader
+	payload := httputil.JwtPayload{
+		Issue:      "RayBox",
+		IssueAt:    time.Now().Unix(),
+		Expiration: time.Now().Add(time.Hour * 24 * 15).Unix(),
+		UserDefined: map[string]any{
+			"username": params.Username,
+		},
+	}
+	secret := config.GetConfig("SECRET_KEY")
+	if token, err := httputil.GenerateToken(header, payload, secret); err != nil {
+		zlog.Error("生成token失败！", zap.Error(err))
+		httputil.JSONFailed().WithError(xerror.NewXErrorByCode(xerror.ErrRuntime)).Response(ctx)
+	} else {
+		refreshTokenBytes := make([]byte, 256)
+		if _, err := io.ReadFull(rand.Reader, refreshTokenBytes); err != nil {
+			zlog.Error("生成refresh token失败！", zap.Error(err))
+			httputil.JSONFailed().WithError(xerror.NewXErrorByCode(xerror.ErrRuntime)).Response(ctx)
+		}
+		ctx.SetCookie(
+			&iris.Cookie{
+				Name:     "ray_box_token",
+				Value:    string(refreshTokenBytes),
+				Expires:  time.Now().Add(time.Hour * 24 * 30),
+				Path:     "/",
+				Domain:   "localhost", // 设置cookie的域名
+				HttpOnly: false,
+				Secure:   false,
+			},
+		)
+		httputil.JSONSuccess().WithMsg("登录成功！").WithData(iris.Map{"Token": token}).Response(ctx)
+	}
 }
