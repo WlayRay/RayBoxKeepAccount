@@ -122,10 +122,10 @@ func RedisConfig(name string) *redis.UniversalOptions {
 	if val, ok := defaultManager.configs.Load(fmt.Sprintf("REDIS_%s_NODES", name)); ok && val != "" {
 		addrs := strings.Split(val.(string), ",")
 		option = redis.UniversalOptions{
-			Addrs:         addrs,
+			Addrs: addrs,
 			// Password:      defaultManager.Get(fmt.Sprintf("REDIS_%s_PASSWORD", name)),
-			PoolSize:      60,
-			MinIdleConns:  30,
+			PoolSize:     60,
+			MinIdleConns: 30,
 		}
 	} else {
 		zlog.Warn(fmt.Sprintf("REDIS_%s_NODES", name) + "不存在")

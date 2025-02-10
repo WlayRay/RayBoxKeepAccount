@@ -1,6 +1,7 @@
 package httputil
 
 import (
+	"ray_box/infrastructure/xerror"
 	"ray_box/infrastructure/zlog"
 
 	"github.com/bytedance/sonic"
@@ -18,8 +19,9 @@ func GetRequestBodyFromValues(ctx iris.Context) []byte {
 	return bodyBytes
 }
 
-// GetRequestParams 获取参数, 1.解析json; 2.校验validate
-func GetRequestParams(ctx iris.Context, params any) bool {
+// GetRequestParams 获取参数, 1.解析json; 2.校验validate; 3.检测前两步是否成功(若失败直接返回)
+func GetRequestParams(ctx iris.Context, params any) {
+	flag := true
 	bodyBytes := GetRequestBodyFromValues(ctx)
 	if len(bodyBytes) == 0 {
 		zlog.Warn("empty request body")
@@ -27,14 +29,14 @@ func GetRequestParams(ctx iris.Context, params any) bool {
 
 	if jErr := sonic.Unmarshal(bodyBytes, &params); jErr != nil {
 		zlog.Error("json unmarshal error", zap.Error(jErr))
-		return false
 	}
 
 	v := GetValidator()
 	if vErr := v.Struct(params); vErr != nil {
 		zlog.Error("validate error", zap.Error(vErr))
-		return false
 	}
 
-	return true
+	if !flag {
+		JSONFailed().WithError(xerror.NewXErrorByCode(xerror.ErrParamInvalid)).Response(ctx)
+	}
 }

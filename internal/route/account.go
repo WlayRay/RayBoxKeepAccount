@@ -7,5 +7,6 @@ import (
 )
 
 func AccountRoute(app *iris.Application) {
+	app.Post("/account/token", controller.AccountController.GetAuthToken)
 	app.Post("/account/login", controller.AccountController.Login)
 }

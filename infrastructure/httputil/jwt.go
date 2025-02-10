@@ -2,7 +2,7 @@ package httputil
 
 var (
 	DefaultHeader = JwtHeader{
-		Algo: "HS256",
+		Algo: "HS256", // hmac + sha256
 		Type: "JWT",
 	}
 )
@@ -22,5 +22,3 @@ type JwtPayload struct {
 	Expiration  int64          `json:"exp"` //到期时间,精确到秒
 	UserDefined map[string]any `json:"ud"`  //用户自定义的其他字段
 }
-
-
