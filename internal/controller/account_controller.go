@@ -91,7 +91,7 @@ func (*accountController) Login(ctx iris.Context) {
 			},
 		)
 
-		timeoutContext, cancel := tools.GetTimeoutCtx(db.REDIS_DB_MASTER)
+		timeoutContext, cancel := tools.GetTimeoutCtx(tools.RedisTimeoutDuration)
 		defer cancel()
 
 		redisConn := db.GetRedisConn(db.REDIS_DB_MASTER)
@@ -124,7 +124,7 @@ func (*accountController) GetAuthToken(ctx iris.Context) {
 		zlog.Error("token验证失败！", zap.Error(errors.New("身份校验失败！")))
 	}
 
-	timeoutContext, cancel := tools.GetTimeoutCtx(db.REDIS_DB_MASTER)
+	timeoutContext, cancel := tools.GetTimeoutCtx(tools.RedisTimeoutDuration)
 	defer cancel()
 
 	redisConn := db.GetRedisConn(db.REDIS_DB_MASTER)
