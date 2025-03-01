@@ -1,9 +1,5 @@
 package service
 
-import (
-	"ray_box/internal/dao"
-)
-
 type accountService struct {
 }
 
@@ -12,5 +8,8 @@ var (
 )
 
 func (*accountService) GetAccountInfo(username string) (map[string]any, error) {
-	return dao.UserDao.GetUserInfo(username, "password")
+	return map[string]any{
+		"username": "admin",
+		"password": "123456",
+	}, nil
 }
